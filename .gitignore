@@ -1,0 +1,32 @@
+## Visual Studio & .NET build outputs ##
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.suo
+*.suo.user
+*.ncb
+*.sdf
+*.opensdf
+*.dbmdl
+
+## OS-specific files ##
+.DS_Store
+Thumbs.db
+
+## Docker and deployment ##
+.dockerignore
+
+## Project-specific ignore directories ##
+/output/
+/scratch/
+
+## Local HTML outputs in workspace root ##
+/*.html
+
+## Ensure test files in the Files directory are NOT ignored ##
+!/tests/DocumentConverter.Tests/Files/
+!/tests/DocumentConverter.Tests/Files/*
