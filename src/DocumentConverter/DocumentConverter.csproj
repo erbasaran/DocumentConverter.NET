@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
+		<PackageId>DocumentConverter</PackageId>
+		<Version>1.0.1</Version>
+		<Authors>Ramazan Erbasaran</Authors>
+		<Description>Convert Word, Excel, PDF documents to HTML</Description>
+
+		<PackageTags>excel word html converter xls xlsx doc docx</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/erbasaran/DocumentConverter.NET</RepositoryUrl>
+
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NPOI" Version="2.5.6" />
+		<PackageReference Include="ScratchPad.NPOI.HWPF" Version="2.5.7" />
+		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
+		<PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
+		<PackageReference Include="UglyToad.PdfPig" Version="1.7.0-custom-5" />
+	</ItemGroup>
+
+</Project>
