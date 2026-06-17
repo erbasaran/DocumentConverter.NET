@@ -2,20 +2,26 @@
 
 	<PropertyGroup>
 		<TargetFramework>netstandard2.0</TargetFramework>
-
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-
+		<AssemblyName>DocumentConverter</AssemblyName>
 		<PackageId>DocumentConverter</PackageId>
-		<Version>1.0.1</Version>
+		<Version>1.0.2</Version>
 		<Authors>Ramazan Erbasaran</Authors>
+		<Copyright>Copyright © 2026 Ramazan Erbasaran</Copyright>
 		<Description>Convert Word, Excel, PDF documents to HTML</Description>
-
-		<PackageTags>excel word html converter xls xlsx doc docx</PackageTags>
+		<PackageTags>document-converter html-converter excel-to-html word-to-html pdf-to-html xls xlsx doc docx pdf dotnet net-standard net document-processing</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageProjectUrl>https://github.com/erbasaran/DocumentConverter.NET</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/erbasaran/DocumentConverter.NET</RepositoryUrl>
-
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageIcon>icon.png</PackageIcon>
 	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
+		<None Include="..\..\LICENSE" Pack="true" PackagePath="\" />
+		<None Include="..\..\icon.png" Pack="true" PackagePath="\" />
+	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Include="NPOI" Version="2.5.6" />
