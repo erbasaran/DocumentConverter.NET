@@ -5,7 +5,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<AssemblyName>DocumentConverter</AssemblyName>
 		<PackageId>DocumentConverter</PackageId>
-		<Version>1.0.4</Version>
+		<Version>1.0.5</Version>
 		<Authors>Ramazan Erbasaran</Authors>
 		<Copyright>Copyright © 2026 Ramazan Erbasaran</Copyright>
 		<Description>DocumentConverter is a powerful document converter library that supports HTML to PDF, XLSX, and DOCX conversion, as well as PDF, XLS, XLSX, DOC, and DOCX to HTML conversion. It provides a simple and efficient API for transforming documents between popular formats while preserving content and structure.</Description>
