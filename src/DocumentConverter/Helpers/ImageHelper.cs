@@ -6,6 +6,149 @@ namespace DocumentConverter.Helpers
 
 	public static class ImageHelper
 	{
+		private static readonly System.Net.Http.HttpClient HttpClientInstance = new System.Net.Http.HttpClient();
+
+		public static byte[] GetImageBytes(string src)
+		{
+			if (string.IsNullOrEmpty(src)) return null;
+
+			try
+			{
+				if (src.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+				{
+					var match = System.Text.RegularExpressions.Regex.Match(src, @"data:image/[^;]+;base64,(?<data>.+)");
+					if (match.Success)
+					{
+						return System.Convert.FromBase64String(match.Groups["data"].Value);
+					}
+				}
+				else if (src.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || src.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+				{
+					using (var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(5)))
+					{
+						var responseTask = HttpClientInstance.GetAsync(src, cts.Token);
+						responseTask.Wait(cts.Token);
+						using (var response = responseTask.Result)
+						{
+							response.EnsureSuccessStatusCode();
+							var readTask = response.Content.ReadAsByteArrayAsync();
+							readTask.Wait(cts.Token);
+							return readTask.Result;
+						}
+					}
+				}
+				else if (File.Exists(src))
+				{
+					return File.ReadAllBytes(src);
+				}
+			}
+			catch
+			{
+				// Ignore load/download failures and return null
+			}
+
+			return null;
+		}
+
+		private static readonly System.Collections.Generic.Dictionary<string, string> MimeTypes = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "jpg", "image/jpeg" },
+			{ "jpeg", "image/jpeg" },
+			{ "png", "image/png" },
+			{ "gif", "image/gif" },
+			{ "bmp", "image/bmp" },
+			{ "tiff", "image/tiff" },
+			{ "tif", "image/tiff" },
+			{ "svg", "image/svg+xml" },
+			{ "emf", "image/x-emf" },
+			{ "wmf", "image/x-wmf" }
+		};
+
+		public static bool TryGetImageDimensions(byte[] bytes, out int width, out int height)
+		{
+			width = 0;
+			height = 0;
+			if (bytes == null || bytes.Length < 8) return false;
+
+			try
+			{
+				// 1. PNG check: starts with 89 50 4E 47 0D 0A 1A 0A
+				if (bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47)
+				{
+					// IHDR block starts at offset 12. Width is at 16 (4 bytes), Height is at 20 (4 bytes), big-endian
+					if (bytes.Length >= 24)
+					{
+						width = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+						height = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+						return width > 0 && height > 0;
+					}
+				}
+
+				// 2. GIF check: starts with 'GIF87a' or 'GIF89a' (47 49 46 38 37/39 61)
+				if (bytes[0] == 0x47 && bytes[1] == 0x49 && bytes[2] == 0x46 && bytes[3] == 0x38)
+				{
+					// Width is at offset 6 (2 bytes, little-endian), Height is at 8 (2 bytes, little-endian)
+					if (bytes.Length >= 10)
+					{
+						width = bytes[6] | (bytes[7] << 8);
+						height = bytes[8] | (bytes[9] << 8);
+						return width > 0 && height > 0;
+					}
+				}
+
+				// 3. BMP check: starts with 'BM' (42 4D)
+				if (bytes[0] == 0x42 && bytes[1] == 0x4D)
+				{
+					// Width is at offset 18 (4 bytes, little-endian), Height is at 22 (4 bytes, little-endian)
+					if (bytes.Length >= 26)
+					{
+						width = bytes[18] | (bytes[19] << 8) | (bytes[20] << 16) | (bytes[21] << 24);
+						height = bytes[22] | (bytes[23] << 8) | (bytes[24] << 16) | (bytes[25] << 24);
+						height = Math.Abs(height);
+						return width > 0 && height > 0;
+					}
+				}
+
+				// 4. JPEG check: starts with FF D8
+				if (bytes[0] == 0xFF && bytes[1] == 0xD8)
+				{
+					int offset = 2;
+					while (offset < bytes.Length - 8)
+					{
+						byte markerStart = bytes[offset];
+						byte markerType = bytes[offset + 1];
+						if (markerStart != 0xFF) break;
+
+						// Skip padding
+						if (markerType == 0xFF)
+						{
+							offset++;
+							continue;
+						}
+
+						int segmentLength = (bytes[offset + 2] << 8) | bytes[offset + 3];
+
+						// SOF0 (Start Of Frame 0) marker is 0xC0, SOF2 is 0xC2, others 0xC1-0xCF except 0xC4, 0xC8, 0xCC
+						if ((markerType >= 0xC0 && markerType <= 0xCF) && 
+							markerType != 0xC4 && markerType != 0xC8 && markerType != 0xCC)
+						{
+							if (offset + 8 < bytes.Length)
+							{
+								height = (bytes[offset + 5] << 8) | bytes[offset + 6];
+								width = (bytes[offset + 7] << 8) | bytes[offset + 8];
+								return width > 0 && height > 0;
+							}
+						}
+
+						offset += 2 + segmentLength;
+					}
+				}
+			}
+			catch { }
+
+			return false;
+		}
+
 		public static byte[] ProcessImage(byte[] rawData, string extension, out string mimeType)
 		{
 			mimeType = GetMimeTypeFromExtension(extension);
@@ -40,29 +183,11 @@ namespace DocumentConverter.Helpers
 		{
 			if (string.IsNullOrEmpty(extension)) return "image/png";
 			extension = extension.TrimStart('.').ToLowerInvariant();
-			switch (extension)
+			if (MimeTypes.TryGetValue(extension, out var mimeType))
 			{
-				case "jpg":
-				case "jpeg":
-					return "image/jpeg";
-				case "png":
-					return "image/png";
-				case "gif":
-					return "image/gif";
-				case "bmp":
-					return "image/bmp";
-				case "tiff":
-				case "tif":
-					return "image/tiff";
-				case "svg":
-					return "image/svg+xml";
-				case "emf":
-					return "image/x-emf";
-				case "wmf":
-					return "image/x-wmf";
-				default:
-					return $"image/{extension}";
+				return mimeType;
 			}
+			return $"image/{extension}";
 		}
 
 		private static byte[] ConvertMetafileToPngIfWindows(byte[] bytes, out string mimeType)

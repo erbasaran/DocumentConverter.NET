@@ -1,91 +1,113 @@
 # DocumentConverter
 
-An open-source, lightweight, and cross-platform .NET Standard 2.0 library designed to convert office documents (**Word, Excel, and PDF**) into clean, semantic HTML formats. 
+DocumentConverter is a powerful document converter library that supports HTML to PDF, XLSX, and DOCX conversion, as well as PDF, XLS, XLSX, DOC, and DOCX to HTML conversion. It provides a simple and efficient API for transforming documents between popular formats while preserving content and structure.
 
-It is ideal for displaying document previews, indexing text content, or integrating document viewers into web applications.
+---
+
+## Key Features
+
+- **🔄 Bidirectional Conversion**: 
+  - **Document ➔ HTML**: Convert legacy/modern Word, Excel, and PDF files into structured HTML.
+  - **HTML ➔ Document**: Convert HTML content back into fully formatted `.docx`, `.xlsx`, or `.pdf` files.
+- **🐧 100% Cross-Platform & Linux Ready**: Completely decoupled from native OS dependencies like GDI+ or `System.Drawing.Common` for metadata lookup. Run it anywhere without Unix-compatibility workarounds.
+- **🖼️ Advanced Image Processing**:
+  - Resolves **Base64 Data URIs**, **local file paths**, and **remote HTTP/HTTPS image URLs** (using a thread-safe, cancellation-supported downloader).
+  - Preserves cell-relative image alignments in PDF and Excel (anchors images exactly inside their source table cells and auto-scales row heights to prevent overlapping content).
+- **⚡ Performance & Memory Optimized**:
+  - Implements **Registry Pattern** for extensibility.
+  - **Cell Style Caching** for NPOI Excel sheets to prevent Excel style limit exhaustion.
+  - Efficient **backtracking StringBuilder text-wrapping** for PDF generation.
 
 ---
 
 ## Installation
 
-Add the library to your solution or project references. It depends on standard open-source libraries:
-* **NPOI** & **ScratchPad.NPOI.HWPF** (for Word and Excel formats)
-* **UglyToad.PdfPig** (for native PDF parsing)
-* **System.Drawing.Common** (for Windows image manipulation)
+Install the package via NuGet:
+
+```bash
+dotnet add package DocumentConverter
+```
 
 ---
 
 ## Usage Examples
 
-Here are some standard ways to convert your documents in C#:
+### 1. Convert Office Documents to HTML
 
-### 1. Converting a File Path to HTML
-The simplest way is to pass the absolute or relative file path to the converter service:
+Initialize the `DocumentConverterService` and perform conversions via file paths or streams:
 
 ```csharp
 using DocumentConverter;
 using DocumentConverter.Models;
 
-// Initialize the converter service
 var service = new DocumentConverterService();
 
-// Convert a Word document path
-Result<string> result = service.ConvertToHtml("C:\\Documents\\report.docx", includeHeaderFooter: false);
-
-if (result.IsSuccess)
+// Option A: Convert from a file path
+Result<string> pathResult = service.ConvertToHtml("report.docx", includeHeaderFooter: false);
+if (pathResult.IsSuccess)
 {
-    string htmlContent = result.Value;
-    // Save or display the HTML output
-    System.IO.File.WriteAllText("C:\\Documents\\report.html", htmlContent);
-    Console.WriteLine("Document converted successfully!");
+    string html = pathResult.Value;
+    File.WriteAllText("report.html", html);
 }
-else
+
+// Option B: Convert from a stream (ideal for web uploads/downloads)
+using (var stream = File.OpenRead("data.xlsx"))
 {
-    Console.WriteLine($"Conversion failed: {result.ErrorMessage}");
+    Result<string> streamResult = service.ConvertToHtml(stream, ".xlsx");
+    if (streamResult.IsSuccess)
+    {
+        string htmlTable = streamResult.Value;
+    }
 }
 ```
 
-### 2. Converting a File Stream
-If you are receiving files via a web upload or database stream, you can convert them directly by passing the stream along with its file extension:
+### 2. Convert HTML back to Office Documents (Bytes or File)
+
+You can convert HTML back to Word, Excel, or PDF documents. The library will write the file directly or return the raw bytes:
 
 ```csharp
-using System.IO;
 using DocumentConverter;
 using DocumentConverter.Models;
 
 var service = new DocumentConverterService();
+string htmlContent = "<h1>Document Title</h1><p>This is a paragraph.</p>";
 
-using (FileStream stream = File.OpenRead("C:\\Documents\\spreadsheet.xls"))
+// Option A: Convert HTML and save directly to a file
+Result<bool> fileResult = service.ConvertFromHtml(htmlContent, ".pdf", "output.pdf");
+if (fileResult.IsSuccess)
 {
-    // Pass the stream, file extension (dot prefix is optional), and options
-    Result<string> result = service.ConvertToHtml(stream, ".xls");
+    Console.WriteLine("PDF file generated successfully!");
+}
 
-    if (result.IsSuccess)
-    {
-        string htmlTable = result.Value;
-        // Proceed with your business logic (e.g., render in a web view)
-    }
-    else
-    {
-        Console.WriteLine($"Error: {result.ErrorMessage}");
-    }
+// Option B: Convert HTML and retrieve the raw bytes
+Result<byte[]> bytesResult = service.ConvertFromHtml(htmlContent, ".docx");
+if (bytesResult.IsSuccess)
+{
+    byte[] docxBytes = bytesResult.Value;
+    File.WriteAllBytes("output.docx", docxBytes);
 }
 ```
 
 ---
 
-## Supported Formats
+## Supported Formats Matrix
 
-| Extension | Document Type | Engine |
-| :--- | :--- | :--- |
-| `.doc` | Legacy Word Document (97-2003) | NPOI / HWPF |
-| `.docx` | Modern Word Document (OpenXML) | NPOI / XWPF |
-| `.xls` | Legacy Excel Spreadsheet (97-2003) | NPOI / HSSF |
-| `.xlsx` | Modern Excel Spreadsheet (OpenXML) | NPOI / XSSF |
-| `.pdf` | PDF Document | UglyToad.PdfPig |
+| Format | Document Type | Document ➔ HTML | HTML ➔ Document | Engine / Parser |
+| :---: | :---: | :---: | :---: | :---: |
+| **`.doc`** | Legacy Word (97-2003) |  | ❌ | NPOI / HWPF |
+| **`.docx`** | Modern Word (OpenXML) |  |  | NPOI / XWPF |
+| **`.xls`** | Legacy Excel (97-2003) |  | ❌ | NPOI / HSSF |
+| **`.xlsx`** | Modern Excel (OpenXML) |  |  | NPOI / XSSF |
+| **`.pdf`** | PDF Document |  |  | UglyToad.PdfPig / PdfSharpCore |
+
+---
+
+## Contributing & Extensibility
+
+Adding a new document format converter is simple. The service implements a **Registry Pattern**. You can register custom converters in `DocumentConverterService` by matching the `IDocumentConverter` (for Document ➔ HTML) and `IHtmlToDocumentConverter` (for HTML ➔ Document) interfaces.
 
 ---
 
 ## License
 
-This project is open-source and released under the MIT License.
+This project is licensed under the **MIT License**.

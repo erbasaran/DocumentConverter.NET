@@ -11,6 +11,26 @@ namespace DocumentConverter
 	/// </summary>
 	public class DocumentConverterService
 	{
+		private static readonly System.Collections.Generic.Dictionary<string, Func<bool, bool, IDocumentConverter>> DocumentConverters = 
+			new System.Collections.Generic.Dictionary<string, Func<bool, bool, IDocumentConverter>>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ ".doc", (includeHeaderFooter, includeHtmlWrapper) => new DocToHtmlConverter(includeHeaderFooter, includeHtmlWrapper) },
+				{ ".docx", (includeHeaderFooter, includeHtmlWrapper) => new DocxToHtmlConverter(includeHeaderFooter, includeHtmlWrapper) },
+				{ ".xls", (includeHeaderFooter, includeHtmlWrapper) => new ExcelToHtmlConverter(includeHtmlWrapper) },
+				{ ".xlsx", (includeHeaderFooter, includeHtmlWrapper) => new ExcelToHtmlConverter(includeHtmlWrapper) },
+				{ ".pdf", (includeHeaderFooter, includeHtmlWrapper) => new PdfToHtmlConverter(includeHtmlWrapper) }
+			};
+
+		private static readonly System.Collections.Generic.Dictionary<string, Func<IHtmlToDocumentConverter>> HtmlConverters = 
+			new System.Collections.Generic.Dictionary<string, Func<IHtmlToDocumentConverter>>(StringComparer.OrdinalIgnoreCase)
+			{
+				{ ".doc", () => new HtmlToDocxConverter() },
+				{ ".docx", () => new HtmlToDocxConverter() },
+				{ ".xls", () => new HtmlToExcelConverter() },
+				{ ".xlsx", () => new HtmlToExcelConverter() },
+				{ ".pdf", () => new HtmlToPdfConverter() }
+			};
+
 		static DocumentConverterService()
 		{
 			try
@@ -79,31 +99,93 @@ namespace DocumentConverter
 					ext = "." + ext;
 				}
 
-				IDocumentConverter converter;
-				switch (ext)
+				if (!DocumentConverters.TryGetValue(ext, out var factory))
 				{
-					case ".doc":
-						converter = new DocToHtmlConverter(includeHeaderFooter, includeHtmlWrapper);
-						break;
-					case ".docx":
-						converter = new DocxToHtmlConverter(includeHeaderFooter, includeHtmlWrapper);
-						break;
-					case ".xls":
-					case ".xlsx":
-						converter = new ExcelToHtmlConverter(includeHtmlWrapper);
-						break;
-					case ".pdf":
-						converter = new PdfToHtmlConverter(includeHtmlWrapper);
-						break;
-					default:
-						return Result<string>.Failure($"Unsupported file extension: {fileExtension}");
+					return Result<string>.Failure($"Unsupported file extension: {fileExtension}");
 				}
 
+				IDocumentConverter converter = factory(includeHeaderFooter, includeHtmlWrapper);
 				return converter.Convert(stream);
 			}
 			catch (Exception ex)
 			{
 				return Result<string>.Failure($"Stream conversion failed: {ex.Message}");
+			}
+		}
+
+		/// <summary>
+		/// Converts an HTML string back to an office document (.docx, .xlsx, .pdf) as a byte array.
+		/// </summary>
+		/// <param name="htmlContent">The HTML content string.</param>
+		/// <param name="targetExtension">The target file extension (e.g. ".docx", ".xlsx", ".pdf").</param>
+		/// <returns>A <see cref="Result{Byte[]}"/> containing the generated file bytes.</returns>
+		public Result<byte[]> ConvertFromHtml(string htmlContent, string targetExtension)
+		{
+			if (string.IsNullOrEmpty(htmlContent))
+			{
+				return Result<byte[]>.Failure("HTML content cannot be null or empty.");
+			}
+			if (string.IsNullOrEmpty(targetExtension))
+			{
+				return Result<byte[]>.Failure("Target extension must be provided.");
+			}
+
+			try
+			{
+				string ext = targetExtension.Trim().ToLowerInvariant();
+				if (!ext.StartsWith("."))
+				{
+					ext = "." + ext;
+				}
+
+				if (!HtmlConverters.TryGetValue(ext, out var factory))
+				{
+					return Result<byte[]>.Failure($"Unsupported target extension for HTML conversion: {targetExtension}");
+				}
+
+				IHtmlToDocumentConverter converter = factory();
+				return converter.Convert(htmlContent);
+			}
+			catch (Exception ex)
+			{
+				return Result<byte[]>.Failure($"HTML conversion failed: {ex.Message}");
+			}
+		}
+
+		/// <summary>
+		/// Converts an HTML string back to an office document and writes the bytes to a file path.
+		/// </summary>
+		/// <param name="htmlContent">The HTML content string.</param>
+		/// <param name="targetExtension">The target file extension (e.g. ".docx", ".xlsx", ".pdf").</param>
+		/// <param name="outputFilePath">The output file path to write the converted document bytes to.</param>
+		/// <returns>A <see cref="Result{Boolean}"/> containing success status.</returns>
+		public Result<bool> ConvertFromHtml(string htmlContent, string targetExtension, string outputFilePath)
+		{
+			if (string.IsNullOrEmpty(outputFilePath))
+			{
+				return Result<bool>.Failure("Output file path cannot be null or empty.");
+			}
+
+			var bytesResult = ConvertFromHtml(htmlContent, targetExtension);
+			if (!bytesResult.IsSuccess)
+			{
+				return Result<bool>.Failure(bytesResult.ErrorMessage);
+			}
+
+			try
+			{
+				string dir = Path.GetDirectoryName(outputFilePath);
+				if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+				{
+					Directory.CreateDirectory(dir);
+				}
+
+				File.WriteAllBytes(outputFilePath, bytesResult.Value);
+				return Result<bool>.Success(true);
+			}
+			catch (Exception ex)
+			{
+				return Result<bool>.Failure($"Failed to write output file: {ex.Message}");
 			}
 		}
 	}

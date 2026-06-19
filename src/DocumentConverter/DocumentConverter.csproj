@@ -5,7 +5,7 @@
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<AssemblyName>DocumentConverter</AssemblyName>
 		<PackageId>DocumentConverter</PackageId>
-		<Version>1.0.2</Version>
+		<Version>1.0.3</Version>
 		<Authors>Ramazan Erbasaran</Authors>
 		<Copyright>Copyright © 2026 Ramazan Erbasaran</Copyright>
 		<Description>Convert Word, Excel, PDF documents to HTML</Description>
@@ -24,7 +24,9 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="HtmlAgilityPack" Version="1.12.4" />
 		<PackageReference Include="NPOI" Version="2.5.6" />
+		<PackageReference Include="PdfSharpCore" Version="1.3.67" />
 		<PackageReference Include="ScratchPad.NPOI.HWPF" Version="2.5.7" />
 		<PackageReference Include="System.Drawing.Common" Version="6.0.0" />
 		<PackageReference Include="System.Text.Encoding.CodePages" Version="6.0.0" />
