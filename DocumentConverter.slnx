@@ -2,6 +2,9 @@
   <Folder Name="/src/">
     <Project Path="src/DocumentConverter/DocumentConverter.csproj" />
   </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/DocumentConverter.Sample/DocumentConverter.Sample.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/DocumentConverter.Tests/DocumentConverter.Tests.csproj" />
   </Folder>

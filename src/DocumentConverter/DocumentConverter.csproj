@@ -9,7 +9,7 @@
 		<Authors>Ramazan Erbasaran</Authors>
 		<Copyright>Copyright © 2026 Ramazan Erbasaran</Copyright>
 		<Description>DocumentConverter is a powerful document converter library that supports HTML to PDF, XLSX, and DOCX conversion, as well as PDF, XLS, XLSX, DOC, and DOCX to HTML conversion. It provides a simple and efficient API for transforming documents between popular formats while preserving content and structure.</Description>
-		<PackageTags>document-converter html-converter excel-to-html word-to-html pdf-to-html xls xlsx doc docx pdf dotnet net-standard net document-processing</PackageTags>
+		<PackageTags>document-converter file-converter convert converter html-converter excel-to-html word-to-html pdf-to-html xls xlsx doc docx pdf dotnet net-standard net document-processing</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageProjectUrl>https://github.com/erbasaran/DocumentConverter.NET</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/erbasaran/DocumentConverter.NET</RepositoryUrl>

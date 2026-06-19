@@ -22,7 +22,6 @@ Thumbs.db
 
 ## Project-specific ignore directories ##
 /output/
-/scratch/
 
 ## Local HTML outputs in workspace root ##
 /*.html
