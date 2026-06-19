@@ -2,6 +2,9 @@
 
 DocumentConverter is a powerful document converter library that supports HTML to PDF, XLSX, and DOCX conversion, as well as PDF, XLS, XLSX, DOC, and DOCX to HTML conversion. It provides a simple and efficient API for transforming documents between popular formats while preserving content and structure.
 
+[![NuGet Version](https://img.shields.io/nuget/v/SmartFileKit.svg?style=flat-square)](https://www.nuget.org/packages/DocumentConverter)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](LICENSE)
+
 ---
 
 ## Key Features
@@ -43,7 +46,7 @@ using DocumentConverter.Models;
 var service = new DocumentConverterService();
 
 // Option A: Convert from a file path
-Result<string> pathResult = service.ConvertToHtml("report.docx", includeHeaderFooter: false);
+Result<string> pathResult = service.ConvertToHtml("report.docx");
 if (pathResult.IsSuccess)
 {
     string html = pathResult.Value;
