@@ -101,7 +101,7 @@ if (bytesResult.IsSuccess)
 | **`.docx`** | Modern Word (OpenXML) |  |  | NPOI / XWPF |
 | **`.xls`** | Legacy Excel (97-2003) |  | ❌ | NPOI / HSSF |
 | **`.xlsx`** | Modern Excel (OpenXML) |  |  | NPOI / XSSF |
-| **`.pdf`** | PDF Document |  |  | UglyToad.PdfPig / PdfSharpCore |
+| **`.pdf`** | PDF Document |  |  | UglyToad.PdfPig / PDFsharp |
 
 ---
 

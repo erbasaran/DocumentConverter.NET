@@ -9,9 +9,9 @@ namespace DocumentConverter.Converters
 	using DocumentConverter.Abstractions;
 	using DocumentConverter.Models;
 	using HtmlAgilityPack;
-	using PdfSharpCore.Drawing;
-	using PdfSharpCore.Drawing.Layout;
-	using PdfSharpCore.Pdf;
+	using PdfSharp.Drawing;
+	using PdfSharp.Drawing.Layout;
+	using PdfSharp.Pdf;
 
 	/// <summary>
 	/// Converts HTML content back to a PDF document using PdfSharpCore.
@@ -32,6 +32,7 @@ namespace DocumentConverter.Converters
 
 			try
 			{
+				DocumentConverter.Helpers.CrossPlatformFontResolver.EnsureRegistered();
 				var doc = new PdfDocument();
 				var htmlDoc = new HtmlDocument();
 				htmlDoc.LoadHtml(html);
@@ -62,7 +63,7 @@ namespace DocumentConverter.Converters
 		{
 			if (nodes == null) return;
 
-			double printableWidth = page.Width - MarginLeft - MarginRight;
+			double printableWidth = page.Width.Point - MarginLeft - MarginRight;
 
 			foreach (var node in nodes)
 			{
@@ -72,7 +73,7 @@ namespace DocumentConverter.Converters
 					if (string.IsNullOrEmpty(text)) continue;
 
 					// Draw text paragraph
-					var font = new XFont("Arial", 10, XFontStyle.Regular);
+					var font = new XFont("Arial", 10, XFontStyleEx.Regular);
 					DrawParagraph(text, font, doc, ref page, ref gfx, ref currentY, printableWidth);
 					continue;
 				}
@@ -105,7 +106,7 @@ namespace DocumentConverter.Converters
 							else if (tagName == "h4") size = 12;
 							else if (tagName == "h5" || tagName == "h6") size = 11;
 
-							var font = new XFont("Arial", size, XFontStyle.Bold);
+							var font = new XFont("Arial", size, XFontStyleEx.Bold);
 							currentY += 8; // spacing before heading
 							DrawParagraph(node.InnerText?.Trim() ?? "", font, doc, ref page, ref gfx, ref currentY, printableWidth);
 							currentY += 6; // spacing after heading
@@ -129,7 +130,7 @@ namespace DocumentConverter.Converters
 								// No images, render as plain text paragraph
 								var styleAttr = node.GetAttributeValue("style", "");
 								bool isBold = styleAttr.Contains("font-weight: bold") || styleAttr.Contains("font-weight:bold");
-								var fontStyle = isBold ? XFontStyle.Bold : XFontStyle.Regular;
+								var fontStyle = isBold ? XFontStyleEx.Bold : XFontStyleEx.Regular;
 								var font = new XFont("Arial", 10, fontStyle);
 
 								DrawParagraph(node.InnerText?.Trim() ?? "", font, doc, ref page, ref gfx, ref currentY, printableWidth);
@@ -145,7 +146,7 @@ namespace DocumentConverter.Converters
 							var liNodes = node.SelectNodes(".//li");
 							if (liNodes != null)
 							{
-								var font = new XFont("Arial", 10, XFontStyle.Regular);
+								var font = new XFont("Arial", 10, XFontStyleEx.Regular);
 								foreach (var li in liNodes)
 								{
 									string bullet = tagName == "ol" ? $"{index++}. " : "• ";
@@ -226,8 +227,8 @@ namespace DocumentConverter.Converters
 
 			currentY += 10; // spacing before table
 
-			var regularFont = new XFont("Arial", 9, XFontStyle.Regular);
-			var headerFont = new XFont("Arial", 9, XFontStyle.Bold);
+			var regularFont = new XFont("Arial", 9, XFontStyleEx.Regular);
+			var headerFont = new XFont("Arial", 9, XFontStyleEx.Bold);
 
 			foreach (var row in rows)
 			{
@@ -331,14 +332,17 @@ namespace DocumentConverter.Converters
 					currentY += 8; // spacing before image
 					EnsureVerticalSpace(height, doc, ref page, ref gfx, ref currentY);
 
-					XImage xImage = XImage.FromStream(() => new MemoryStream(imageBytes));
-					gfx.DrawImage(xImage, MarginLeft, currentY, width, height);
+					using (var imgStream = new MemoryStream(imageBytes))
+					{
+						XImage xImage = XImage.FromStream(imgStream);
+						gfx.DrawImage(xImage, MarginLeft, currentY, width, height);
+					}
 
 					currentY += height + 8; // spacing after image
 				}
 				catch (Exception ex)
 				{
-					var font = new XFont("Arial", 9, XFontStyle.Italic);
+					var font = new XFont("Arial", 9, XFontStyleEx.Italic);
 					DrawParagraph($"[Image layout error: {ex.Message}]", font, doc, ref page, ref gfx, ref currentY, printableWidth);
 				}
 			}
@@ -420,8 +424,11 @@ namespace DocumentConverter.Converters
 
 				try
 				{
-					XImage xImage = XImage.FromStream(() => new MemoryStream(imageBytes));
-					gfx.DrawImage(xImage, x, y, width, height);
+					using (var imgStream = new MemoryStream(imageBytes))
+					{
+						XImage xImage = XImage.FromStream(imgStream);
+						gfx.DrawImage(xImage, x, y, width, height);
+					}
 					y += height + 4; // increment Y position in cell
 				}
 				catch { }
@@ -475,7 +482,7 @@ namespace DocumentConverter.Converters
 
 		private void EnsureVerticalSpace(double heightNeeded, PdfDocument doc, ref PdfPage page, ref XGraphics gfx, ref double currentY)
 		{
-			double maxAvailableY = page.Height - MarginBottom;
+			double maxAvailableY = page.Height.Point - MarginBottom;
 			if (currentY + heightNeeded > maxAvailableY)
 			{
 				// Create new page and reset Y

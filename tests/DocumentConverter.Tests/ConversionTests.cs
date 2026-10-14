@@ -33,7 +33,9 @@ namespace DocumentConverter.Tests
 				{
 					return root;
 				}
-				root = Path.GetDirectoryName(root);
+				string? parent = Path.GetDirectoryName(root);
+				if (string.IsNullOrEmpty(parent)) break;
+				root = parent;
 			}
 			throw new FileNotFoundException("Workspace root with solution not found.");
 		}
@@ -514,6 +516,67 @@ namespace DocumentConverter.Tests
 					Assert.Equal(92, h);
 				}
 			}
+		}
+
+		[Fact]
+		public void TestImageHelperBlocksSsrfInternalAddresses()
+		{
+			// Loopback IPv4
+			byte[] loopbackBytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://127.0.0.1:8080/admin/secret.png");
+			Assert.Null(loopbackBytes);
+
+			// Localhost name
+			byte[] localhostBytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://localhost:5000/logo.png");
+			Assert.Null(localhostBytes);
+
+			// Cloud metadata IP (AWS/GCP/Azure)
+			byte[] metadataBytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://169.254.169.254/latest/meta-data/credentials");
+			Assert.Null(metadataBytes);
+
+			// Private RFC 1918 addresses
+			byte[] private10 = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://10.0.0.1/logo.png");
+			Assert.Null(private10);
+
+			byte[] private192 = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://192.168.1.1/logo.png");
+			Assert.Null(private192);
+
+			byte[] private172 = DocumentConverter.Helpers.ImageHelper.GetImageBytes("http://172.16.0.1/logo.png");
+			Assert.Null(private172);
+		}
+
+		[Fact]
+		public void TestImageHelperBlocksNonImageLocalFiles()
+		{
+			string root = GetWorkspaceRoot();
+
+			// 1. Trying to read a solution file or text file directly should be blocked
+			string slnPath = Path.Combine(root, "DocumentConverter.slnx");
+			byte[] slnBytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes(slnPath);
+			Assert.Null(slnBytes);
+
+			// 2. Even if renamed to an image extension, non-image content is rejected by magic byte validation
+			string fakeImgPath = Path.Combine(root, "fake_test_exploit.png");
+			try
+			{
+				File.WriteAllText(fakeImgPath, "SECRET_API_KEY=ABC1234567890_THIS_IS_NOT_A_PNG");
+				byte[] fakeBytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes(fakeImgPath);
+				Assert.Null(fakeBytes);
+			}
+			finally
+			{
+				if (File.Exists(fakeImgPath)) File.Delete(fakeImgPath);
+			}
+		}
+
+		[Fact]
+		public void TestImageHelperAllowsValidImages()
+		{
+			// 1x1 valid PNG transparent pixel
+			string validPngDataUri = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+			byte[] bytes = DocumentConverter.Helpers.ImageHelper.GetImageBytes(validPngDataUri);
+			Assert.NotNull(bytes);
+			Assert.True(bytes.Length > 0);
+			Assert.True(DocumentConverter.Helpers.ImageHelper.IsValidImage(bytes));
 		}
 	}
 }
